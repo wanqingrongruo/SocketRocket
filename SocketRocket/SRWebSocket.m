@@ -401,7 +401,14 @@ NSString *const SRHTTPResponseErrorKey = @"HTTPResponseStatusCode";
     }
 
     if(![self _checkHandshake:httpMessage]) {
-        NSError *error = SRErrorWithCodeDescription(2133, @"Invalid Sec-WebSocket-Accept response.");
+        NSString *acceptHeader = CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(httpMessage, CFSTR("Sec-WebSocket-Accept")));
+        NSString *concattedString = [_secKey stringByAppendingString:SRWebSocketAppendToSecKeyString];
+        NSData *hashedString = SRSHA1HashFromString(concattedString);
+        NSString *expectedAccept = SRBase64EncodedStringFromData(hashedString);
+        
+        NSString *msg = [NSString stringWithFormat:@"Invalid Sec-WebSocket-Accept response, acceptHeader = %@, expectedAccept = %@", acceptHeader, expectedAccept];
+        
+        NSError *error = SRErrorWithCodeDescription(2133, msg);
         [self _failWithError:error];
         return;
     }
